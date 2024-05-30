@@ -47,6 +47,12 @@ const Header: React.FC<HeaderProps> = ({ title, loggedIn }) => {
     setAnchorElUser(null);
   };
 
+  const handleLogin = () => {
+    console.log("Login");
+
+    handleCloseUserMenu();
+  };
+
   const Theme = createTheme();
 
   return (
@@ -110,6 +116,7 @@ const Header: React.FC<HeaderProps> = ({ title, loggedIn }) => {
               fontWeight: 700,
               color: "inherit",
               textDecoration: "none",
+              paddingRight: Theme.spacing(0.2),
             }}
           >
             {title}
@@ -145,7 +152,7 @@ const Header: React.FC<HeaderProps> = ({ title, loggedIn }) => {
             >
               {loggedIn
                 ? user_settings.map((setting) => (
-                    <MenuItem key={setting} onClick={handleCloseUserMenu}>
+                    <MenuItem key={setting} onClick={handleLogin}>
                       <Typography textAlign="center">{setting}</Typography>
                     </MenuItem>
                   ))

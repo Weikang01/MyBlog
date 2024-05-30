@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   Link,
   TextField,
@@ -10,31 +10,19 @@ import {
   FormControlLabel,
   Checkbox,
   Grid,
-  Box,
 } from "@mui/material";
 import { makeStyles, Theme } from "@material-ui/core/styles";
-
-function Copyright() {
-  return (
-    <Typography variant="body2" align="center">
-      {"Copyright © "}
-      <Link color="inherit" href="https://mui.com/">
-        Your Website
-      </Link>{" "}
-      {new Date().getFullYear()}
-      {"."}
-    </Typography>
-  );
-}
+import { Google as GoogleIcon } from "@mui/icons-material";
 
 const useStyles = makeStyles((theme: Theme) => ({
   card: {
-    maxWidth: 445,
+    maxWidth: 405,
     margin: "auto",
     marginTop: theme.spacing(8),
   },
   paper: {
-    marginTop: theme.spacing(8),
+    marginTop: theme.spacing(4),
+    marginBottom: theme.spacing(4),
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -49,13 +37,116 @@ const useStyles = makeStyles((theme: Theme) => ({
   submit: {
     margin: theme.spacing(3, 0, 2),
   },
+  googleButton: {
+    margin: theme.spacing(0, 0, 2),
+  },
 }));
 
 export default function SignIn() {
   const emailRef = useRef<HTMLInputElement>(null);
+  const [emailDisable, setEmailDisable] = useState<boolean>(false);
+  const [emailError, setEmailError] = useState<boolean>(false);
+  const [emailHelperText, setEmailHelperText] = useState<string>("");
+
   const passwordRef = useRef<HTMLInputElement>(null);
+  const [passwordDisable, setPasswordDisable] = useState<boolean>(false);
+  const [passwordError, setPasswordError] = useState<boolean>(false);
+  const [passwordHelperText, setPasswordHelperText] = useState<string>("");
+
+  const updateInput = (
+    isDisable: boolean,
+    isError: boolean,
+    helperText: string
+  ) => {
+    if (isDisable) {
+      setEmailDisable(true);
+      setPasswordDisable(true);
+    } else if (isError) {
+      setEmailDisable(false);
+      setEmailError(true);
+      setEmailHelperText(helperText);
+      setPasswordDisable(false);
+      setPasswordError(true);
+      setPasswordHelperText(helperText);
+    } else {
+      setEmailDisable(false);
+      setEmailError(false);
+      setEmailHelperText("");
+      setPasswordDisable(false);
+      setPasswordError(false);
+      setPasswordHelperText("");
+    }
+  };
 
   const classes = useStyles();
+
+  const handleSubmit = async (
+    e: React.FormEvent,
+    onStart: () => void,
+    onComplete: () => void
+  ) => {
+    e.preventDefault();
+    const email = emailRef.current?.value;
+    const password = passwordRef.current?.value;
+
+    if (!email || !password) {
+      updateInput(false, true, "Email and Password are required.");
+      return;
+    }
+
+    // Call the onStart callback
+    onStart();
+
+    // Handle login logic here
+    const serverURL = import.meta.env.VITE_SERVER_URL;
+
+    try {
+      const token = sessionStorage.getItem("token");
+
+      const response = await fetch(`${serverURL}/auth/login`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        switch (response.status) {
+          case 401:
+            const data = await response.json();
+            updateInput(false, true, data.error);
+            break;
+          case 500:
+            updateInput(false, true, "Server error, please try again later.");
+            break;
+          default:
+            updateInput(false, true, "Unexpected error, please try again.");
+            break;
+        }
+      } else {
+        updateInput(false, false, "");
+      }
+    } catch (error: any) {
+      if (error.status !== 401 && error.status !== 400) {
+        console.error("Error:", error);
+      }
+      updateInput(false, true, "Server error, please try again later.");
+    } finally {
+      // Call the onComplete callback
+      onComplete();
+    }
+  };
+
+  const handleStart = () => {
+    updateInput(true, false, "");
+  };
+
+  const handleComplete = () => {
+    // Add additional actions to perform after the fetch request
+  };
 
   return (
     <>
@@ -81,8 +172,11 @@ export default function SignIn() {
                 autoComplete="email"
                 autoFocus
                 inputRef={emailRef}
-                style={{ color: "red" }}
+                disabled={emailDisable}
+                error={emailError}
+                helperText={emailHelperText}
               />
+
               <TextField
                 variant="outlined"
                 margin="normal"
@@ -94,6 +188,9 @@ export default function SignIn() {
                 id="password"
                 autoComplete="current-password"
                 inputRef={passwordRef}
+                disabled={passwordDisable}
+                error={passwordError}
+                helperText={passwordHelperText}
               />
               <FormControlLabel
                 control={<Checkbox value="remember" />}
@@ -104,9 +201,22 @@ export default function SignIn() {
                 fullWidth
                 variant="contained"
                 className={classes.submit}
+                onClick={(e) => handleSubmit(e, handleStart, handleComplete)}
               >
                 Sign In
               </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                className={classes.googleButton}
+                startIcon={<GoogleIcon />}
+                onClick={() => {
+                  // Handle Google login logic here
+                }}
+              >
+                Sign In with Google
+              </Button>
+
               <Grid container>
                 <Grid item xs>
                   <Link href="#" variant="body2">
@@ -121,9 +231,6 @@ export default function SignIn() {
               </Grid>
             </form>
           </div>
-          <Box mt={8}>
-            <Copyright />
-          </Box>
         </CardContent>
       </Card>
     </>
